@@ -4,13 +4,13 @@
 #include <math.h>
 #include "BirdEye.h"
 
-#define IMAGE_WIDTH 3456.0
-#define IMAGE_HEIGHT 3456.0
+#define IMAGE_WIDTH 1920.0
+#define IMAGE_HEIGHT 1056.0
 	
 #define ROI_U_MIN 1.0
-#define ROI_U_MAX 3454.0
-#define ROI_V_MIN 1.0
-#define ROI_V_MAX 3454.0
+#define ROI_U_MAX 1918.0
+#define ROI_V_MIN 700
+#define ROI_V_MAX 1000.0
 
 //输出的图片尺寸
 #define OUTPUT_WIDTH 960.0
@@ -30,8 +30,8 @@ spatial_coordinate pixel2world(pixel_coordinate point, double height, double yaw
 pixel_coordinate world2pixel(spatial_coordinate point, double height, double yaw, double alpha, double beta)
 {
 	pixel_coordinate output;
-	output.u = (IMAGE_WIDTH - 1) / 2 / tan(alpha)*tan(yaw - atan(point.y / height));
-	output.v = sqrt(1 + pow((2 * output.u / (IMAGE_WIDTH - 1) * tan(alpha)), 2)) * point.x / sqrt(pow(height, 2) + pow(point.y, 2))*(IMAGE_HEIGHT - 1) / 2 / tan(beta);
+	output.u = (IMAGE_HEIGHT - 1) / 2 / tan(alpha)*tan(yaw - atan(point.y / height));
+	output.v = sqrt(1 + pow((2 * output.u / (IMAGE_HEIGHT - 1) * tan(alpha)), 2)) * point.x / sqrt(pow(height, 2) + pow(point.y, 2))*(IMAGE_WIDTH - 1) / 2 / tan(beta);
 	return output;
 }
 
@@ -44,11 +44,15 @@ void getBirdEye(Mat input, Mat &output, double height, double yaw, double alpha,
 
 	//之所以需要翻转时因为我们这个算法，小孔成像点是在物和像之间，所以在输出时也要加上对 output 的翻转
 	flip(input, input, 0);
-
-	pixel_coordinate left_up = { (IMAGE_HEIGHT - 1) / 2 - ROI_V_MIN, ROI_U_MIN - (IMAGE_WIDTH - 1) / 2 };
-	pixel_coordinate right_down = { (IMAGE_HEIGHT - 1)/ 2 - ROI_V_MAX, ROI_U_MAX - (IMAGE_WIDTH - 1) / 2 };
-	pixel_coordinate left_down = { (IMAGE_HEIGHT - 1) / 2 - ROI_V_MAX, ROI_U_MIN - (IMAGE_WIDTH - 1) / 2 };
-	pixel_coordinate right_up = { (IMAGE_HEIGHT - 1)/ 2 - ROI_V_MIN, ROI_U_MAX - (IMAGE_WIDTH - 1)/ 2 };
+	double roi_v_max, roi_v_min, roi_u_min, roi_u_max;
+	roi_v_max = IMAGE_HEIGHT - 1 - ROI_V_MIN;
+	roi_v_min = IMAGE_HEIGHT - 1 - ROI_V_MAX;
+	roi_u_max = IMAGE_WIDTH - 1 - ROI_U_MIN;
+	roi_u_min = IMAGE_WIDTH - 1 - ROI_U_MAX;
+	pixel_coordinate left_up = { (IMAGE_HEIGHT - 1) / 2 - roi_v_min, roi_u_min - (IMAGE_WIDTH - 1) / 2 };
+	pixel_coordinate right_down = { (IMAGE_HEIGHT - 1)/ 2 - roi_v_max, roi_u_max - (IMAGE_WIDTH - 1) / 2 };
+	pixel_coordinate left_down = { (IMAGE_HEIGHT - 1) / 2 - roi_v_max, roi_u_min - (IMAGE_WIDTH - 1) / 2 };
+	pixel_coordinate right_up = { (IMAGE_HEIGHT - 1)/ 2 - roi_v_min, roi_u_max - (IMAGE_WIDTH - 1)/ 2 };
 	spatial_coordinate right_earlier, left_farther;
 	right_earlier = pixel2world(left_up, height, yaw, alpha, beta);
 	left_farther = pixel2world(right_down, height, yaw, alpha, beta);
