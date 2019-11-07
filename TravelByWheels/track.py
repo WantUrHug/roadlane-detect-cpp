@@ -4,6 +4,48 @@ from pprint import pprint
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 
+def read_components(log):
+
+	with open(log, encoding = "utf-8") as file:
+		
+		a = file.readlines()
+		xs = []
+		ys = []
+		zs = []
+		ts = []
+		#pprint(len(a))
+		for b in a[1:]:
+			b = b.split(",")
+			#print(b)
+			x = float(b[0])
+			y = float(b[1])
+			z = float(b[2])
+			ts.append(strptime(b[6][:-2]))
+			xs.append(x)
+			ys.append(y)
+			zs.append(z)
+
+	return ts, xs, ys, zs
+
+def angles_gen(xs, ys):
+	sx, sy = [], []
+	for i in range(len(xs)):
+		sum = np.sqrt(xs[i]**2 + ys[i]**2)
+		ax = np.arccos(xs[i]/sum)*180/np.pi
+		ay = np.arccos(ys[i]/sum)*180/np.pi
+		if ax < 90:
+			if ay < 90:
+				ax = 360 - ax
+		else:
+			if ay >= 90:
+				ay = 360 - ay
+			else:
+				ax = 360 - ax 
+				ay = 360 - ay
+		sx.append(ax)
+		sy.append(ay)
+	return sx, sy
+
 def read_angles(log):
 	
 	dif = []
@@ -21,26 +63,23 @@ def read_angles(log):
 			y = float(b[4])
 			ts.append(strptime(b[6][:-2]))
 			xs.append(x)
-			ys.append(x)
+			ys.append(y)
 	return ts, xs, ys
 
-def data_justify(ts, xs, ys):
+def data_justify(ts, xs, ys, start_year, start_month, start_day, start_h, start_m, interv_m):
 
 	#freq = 20
-	interv_m = 6
-	start_m = 41
+	#interv_m = 8
+	#start_m = 38
 	#tot = 20*4*60
 	new_ts = []
 	for minute in range(start_m, start_m + interv_m):
 		for second in range(0, 60):
 			for ms in range(0, 1000, 50):
-				new_ts.append(build_t(2019, 11, 4, 19, minute, second, ms))
+				new_ts.append(build_t(2019, start_month, start_day, start_h, minute, second, ms))
 	num = len(ts)
 	result_x = []
 	result_y = []
-
-	start_m = 12
-	start_s, start_ms = 0, 0
 
 	ind = 0
 	max_ind = len(ts)
@@ -95,7 +134,9 @@ def data_justify(ts, xs, ys):
 
 def cal_second(t):
 
-	return t["min"]*60+t["second"]+t["ms"]/1000
+
+
+	return t["day"]*24*60*60+t["hour"]*60*60+t["min"]*60+t["second"]+t["ms"]/1000
 
 def build_t(year, month, day, hour, minute, second, ms):
 
@@ -160,8 +201,8 @@ def draw(ldis, rdis, axle = 180):
 	turtle.pensize(1)
 	turtle.speed(4)
 	turtle.penup()
-	turtle.sety(50)
-	turtle.setx(-400)
+	turtle.sety(2000)
+	turtle.setx(0)
 	turtle.left(90)
 	turtle.pendown()
 
@@ -203,7 +244,7 @@ class draw_and_save():
 		self.rdis = rdis
 		self.axle = axle
 		self.fig, self.ax = plt.subplots()
-		self.xdata, self.ydata = [-400], [-200]
+		self.xdata, self.ydata = [-1000], [-1000]
 		self.ln,  = plt.plot([], [], "ro", animated = True, ms = 1)
 		self.angle = 90*np.pi/180
 
@@ -215,8 +256,8 @@ class draw_and_save():
 		self.stop_y = self.ydata[-1]
 
 	def init(self):
-		self.ax.set_xlim(-1500, 1500)
-		self.ax.set_ylim(-1500, 1500)
+		self.ax.set_xlim(-2000, 2000)
+		self.ax.set_ylim(-2000, 1000)
 		return self.ln, 
 
 	def update(self, frame):
@@ -236,7 +277,8 @@ class draw_and_save():
 			if not self.being_stop:
 				try:
 					if (self.xdata[-1] - self.xdata[-self.wait_thresh])**2 + (self.ydata[-1] - self.ydata[-self.wait_thresh])**2 < self.epsilon**2:
-						print(self.xdata[-1], self.ydata[-1])
+						#print(self.xdata[-1], self.ydata[-1])
+						pass
 				except:
 					print("too early.")
 			dis = 0
@@ -261,15 +303,20 @@ class draw_and_save():
 			print("exit.")
 		#plt.savefig("1.jpg")
 
-def main(left_log, right_log, radius = 35, axle = 166):
+def main(left_log, right_log, radius, axle, start_year, start_month, start_day, start_h, start_m, interv_m):
 
-	left = read_angles(left_log)
-	lafter = data_justify(left[0], left[1], left[2])
-	ldis = cal_dis(lafter[1], lafter[2], radius)
+	left = read_components(left_log)
+	lxs, lys = angles_gen(left[1], left[2])
+	#print(lxs)
+	lafter = data_justify(left[0], lxs, lys, start_year, start_month, start_day, start_h, start_m, interv_m)
+	print(len(lafter[1]))
+	ldis = cal_dis(lafter[1], lafter[2], 35.5)
 
-	right = read_angles(right_log)
-	rafter = data_justify(right[0], right[1], right[2])
-	rdis = cal_dis(rafter[1], rafter[2], radius)
+	right = read_components(right_log)
+	rxs, rys = angles_gen(right[1], right[2])
+	rafter = data_justify(right[0], rxs, rys, start_year, start_month, start_day, start_h, start_m, interv_m)
+	print(len(rafter[1]))
+	rdis = cal_dis(rafter[1], rafter[2], 35.5)
 	rdis = [-i for i in rdis]
 
 	a = draw_and_save(ldis, rdis, axle)
@@ -277,10 +324,11 @@ def main(left_log, right_log, radius = 35, axle = 166):
 	#draw(ldis, rdis,axle)
 
 if __name__ == "__main__":
+
 	left_log = "left.log"
 	right_log = "right.log"
 	
-	main(left_log, right_log)
+	main(left_log, right_log, 36, 167, 2019, 11, 5, 19, 37, 8)
 
 
 
