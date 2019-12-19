@@ -1,0 +1,4 @@
+
+*.py linguist-language=cpp
+*.cpp linguist-language=cpp
+*.h linguist-language=cpp
